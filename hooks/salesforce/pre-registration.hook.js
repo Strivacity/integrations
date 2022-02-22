@@ -1,22 +1,20 @@
 /**
- * IDDataWeb Identity Verification integration example
+ * Salesforce integration example
  * 
- * This code is provided as a sample integration with IDDataWeb Identity Verification service. Customize 
- * it to fit your needs.
+ * This code is provided as a sample integration with Salesforce. Customize to fit your needs.
  * 
- * @module integrations/iddataweb
+ * @module integrations/salesforce
  */
 
-const axios = require('axios')
-const jwksClient = require('jwks-rsa');
-const jwt = require('jsonwebtoken');
-const url = require('url');
+const nforce = require('nforce')
 
-// iddw/strivacity config
-const IDDW_CLIENT_ID = "[client_id]";
-const IDDW_CLIENT_SECRET = "[client_secret]";
-const IDDW_BASE_URL = "https://prod1.iddataweb.com/prod-axn/axn/oauth2";
-const STRV_BASE_URL = "https://[domain].strivacity.com";
+// sfdc config
+const SFDC_ENVIRONMENT = 'production'
+const SFDC_USER = '[user]'
+const SFDC_PASSWORD = '[password]'
+const SFDC_APP_CLIENT_ID = '[client_id]'
+const SFDC_APP_CLIENT_SECRET = '[client_secret]'
+const SFDC_APP_REDIRECT_URI = 'http://localhost:1717/redirect'
 
 /** This function will be called from the Pre registration hook in a blocking manner.
  *
@@ -52,109 +50,50 @@ const STRV_BASE_URL = "https://[domain].strivacity.com";
  * @param {denyRequestCallback} deny
  */
 module.exports = async function({ application, oidc_context, customer, session, continue_context, continue_request_parameters }, callback, deny) {
-    if (continue_context) {
-        await handleContinue(session, continue_context.code, callback, deny);
-    } else {
-        await handleRedirect(session, callback);
-    }
-};
+    // get a connection to SFDC
+    var conn = nforce.createConnection({
+        clientId: SFDC_APP_CLIENT_ID,
+        clientSecret: SFDC_APP_CLIENT_SECRET,
+        redirectUri: SFDC_APP_REDIRECT_URI,
+        environment: SFDC_ENVIRONMENT,
+    });
 
-/**
- * Handle a continued invocation of this hook
- * 
- * @param {*} session     session object
- * @param {*} code        OIDC authorization code
- * @param {*} callback    hook callback
- * @param {*} deny        deny callback
- */
-async function handleContinue(session, code, callback, deny) {
-    // get the IDDW result
-    let iddwResult;
-    try {
-        iddwResult = await getIDDWResult(code)
-    } catch (e) {
+    // login to SFDC
+    const token = await conn.authenticate({ username: SFDC_USER, password: SFDC_PASSWORD })
+    if (!token) {
+        deny(new ErrorDenyRequest("Failed to authenticate to salesforce.", ""));
+        return
+    }
+
+    // get contact based on email address
+    const contact = await getContact(conn, token, customer.attributes.emails.primaryEmail)
+    if (!contact) {
         callback(new ShowErrorMessage("This account could not be verified.", session));
-        return;
-    }
-
-    if (!iddwResult || iddwResult.policyDecision !== 'approve') {
-        deny(new ErrorDenyRequest("Failed validation", ""));
-        return;
+        return
     }
 
     callback(new RegistrationData(customer.attributes, [], session));
 }
 
 /**
- * Retrieve the IDDW results.
+ * Retrieve a contact from SFDC based on the email address.
  * 
- * @param {string}  code    OIDC authorization code
+ * @param {*} conn      SFDC connection
+ * @param {*} token     SFDC token
+ * @param {*} address   email address to look up
+ * @returns SFDC contact
  */
-async function getIDDWResult(code) {
-    // create basic auth header
-    const token = Buffer.from(`${IDDW_CLIENT_ID}:${IDDW_CLIENT_SECRET}`).toString('base64');
-    const requestHeaders = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${token}`
-    };
+async function getContact(conn, token, address) {
+    let result;
 
-    // set up form data for post
-    const formData = new url.URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: STRV_BASE_URL + '/provider/continue'
-    });
-
-    // post the transaction
-    const tokenResponse = await axios.post(
-        IDDW_BASE_URL + '/token',
-        formData.toString(), {
-            requestHeaders
-        }
-    );
-    if (tokenResponse.data.error) {
-        throw new Error(tokenResponse.data.error_description || "Could not obtain token");
+    // perform SOQL query
+    const contact_query = `SELECT id FROM Contact WHERE Email = '${address}'`;
+    let query_result = await conn.query({ query: contact_query, oauth: token })
+    if (query_result && query_result.totalSize == 1) {
+        result = query_result.records[0]
     }
 
-    // get a jwks client to verify the response
-    var client = jwksClient({
-        jwksUri: IDDW_BASE_URL + '/jwks.json'
-    });
-
-    function getKey(header, callback) {
-        client.getSigningKey(header.kid, function(err, key) {
-            var signingKey = key.publicKey || key.rsaPublicKey;
-            callback(null, signingKey);
-        });
-    }
-
-    // verify and return the decoded result
-    return await new Promise((resolve, reject) => {
-        jwt.verify(tokenResponse.data.id_token, getKey, (err, decoded) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(decoded);
-            }
-        });
-    });
-}
-
-/**
- * Handle a redirect invocation of this hook
- * 
- * @param {*} session     session object
- * @param {*} callback    hook callback
- */
-function handleRedirect(session, callback) {
-    // this is not the callback from iddw, so initiate the authorization flow against them
-    callback(new RedirectRequestData(
-        ID_DATAWEB_BASE_URL + '/authorize' +
-        `?client_id=${ID_DATAWEB_CLIENT_ID}` +
-        '&scope=openid+country.US' +
-        '&response_type=code' +
-        `&redirect_uri=${STRV_URL}/provider/continue`,
-        session));
+    return result;
 }
 
 /** Allow registration
