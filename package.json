@@ -1,19 +1,19 @@
 {
-  "name": "integrations",
-  "version": "0.0.1",
-  "description": "Strivacity Integrations",
-  "main": "./hooks",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Strivacity/integrations.git"
-  },
-  "author": "",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/Strivacity/integrations/issues"
-  },
-  "homepage": "https://github.com/Strivacity/integrations#readme"
+    "name": "integrations",
+    "version": "0.0.2",
+    "description": "Strivacity Integrations",
+    "main": "./hooks",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Strivacity/integrations.git"
+    },
+    "author": "",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/Strivacity/integrations/issues"
+    },
+    "homepage": "https://github.com/Strivacity/integrations#readme"
 }

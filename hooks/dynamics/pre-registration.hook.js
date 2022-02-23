@@ -1,22 +1,22 @@
 /**
- * IDDataWeb Identity Verification integration example
+ * MS Dynamics 365 integration example
  * 
- * This code is provided as a sample integration with IDDataWeb Identity Verification service. Customize 
- * it to fit your needs.
+ * This code is provided as a sample integration with MS Dynamics 365. Customize it to fit your needs.
  * 
- * @module integrations/iddataweb
+ * @module integrations/dynamics
  */
 
-const axios = require('axios')
-const jwksClient = require('jwks-rsa');
-const jwt = require('jsonwebtoken');
-const url = require('url');
+var dynamics = require('dynamics-web-api');
+var AuthenticationContext = require('adal-node').AuthenticationContext;
 
-// iddw/strivacity config
-const IDDW_CLIENT_ID = "[client_id]";
-const IDDW_CLIENT_SECRET = "[client_secret]";
-const IDDW_BASE_URL = "https://prod1.iddataweb.com/prod-axn/axn/oauth2";
-const STRV_BASE_URL = "https://[domain].strivacity.com";
+// dynamics config
+var DYNAMICS_AUTHORITY_URL = 'https://login.microsoftonline.com/[tenant]/oauth2/token';
+var DYNAMICS_RESOURCE = 'https://[domain].crm.dynamics.com/';
+var DYNAMICS_CLIENT_ID = '[client_id]';
+var DYNAMICS_CLIENT_SECRET = '[client_secret]'
+
+// get an adal context for use in auth
+var adalContext = new AuthenticationContext(DYNAMICS_AUTHORITY_URL);
 
 /** This function will be called from the Pre registration hook in a blocking manner.
  *
@@ -49,112 +49,37 @@ const STRV_BASE_URL = "https://[domain].strivacity.com";
  * @param {string}   args.continue_request_parameters.callback_url  Callback url to use after a continue call
  * @param {string}   args.continue_request_parameters.state         State parameter to use after a continue call
  * @param {preRegistrationCallback} callback
- * @param {denyRequestCallback} deny
+ * @param {denyRequestCallback} error
  */
-module.exports = async function({ application, oidc_context, customer, session, continue_context, continue_request_parameters }, callback, deny) {
-    if (continue_context) {
-        await handleContinue(session, continue_context.code, callback, deny);
-    } else {
-        await handleRedirect(session, callback);
-    }
+module.exports = async function({ application, oidc_context, customer, session, continue_context, continue_request_parameters }, callback, error) {
+    // get a connection to dynamics
+    var client = new dynamics({
+        webApiUrl: DYNAMICS_RESOURCE + 'api/data/v9.1/',
+        onTokenRefresh: acquireToken
+    });
+
+    // get contact based on email address
+    var records = await client.retrieveMultiple("contacts", ["fullname"], `emailaddress1 eq '${customer.attributes.emails.primaryEmail}'`)
+    console.log(records)
+
+    // the following function call does not modify the registering user
+    callback(new RegistrationData(customer.attributes, [], session));
 };
 
 /**
- * Handle a continued invocation of this hook
- * 
- * @param {*} session     session object
- * @param {*} code        OIDC authorization code
- * @param {*} callback    hook callback
- * @param {*} deny        deny callback
+ * Callback for acquiring a token via ADAL
  */
-async function handleContinue(session, code, callback, deny) {
-    // get the IDDW result
-    let iddwResult;
-    try {
-        iddwResult = await getIDDWResult(code)
-    } catch (e) {
-        callback(new ShowErrorMessage("This account could not be verified.", session));
-        return;
-    }
-
-    if (!iddwResult || iddwResult.policyDecision !== 'approve') {
-        deny(new ErrorDenyRequest("Failed validation", ""));
-        return;
-    }
-
-    callback(new RegistrationData(customer.attributes, [], session));
-}
-
-/**
- * Retrieve the IDDW results.
- * 
- * @param {string}  code    OIDC authorization code
- */
-async function getIDDWResult(code) {
-    // create basic auth header
-    const token = Buffer.from(`${IDDW_CLIENT_ID}:${IDDW_CLIENT_SECRET}`).toString('base64');
-    const requestHeaders = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${token}`
-    };
-
-    // set up form data for post
-    const formData = new url.URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: STRV_BASE_URL + '/provider/continue'
-    });
-
-    // post the transaction
-    const tokenResponse = await axios.post(
-        IDDW_BASE_URL + '/token',
-        formData.toString(), {
-            requestHeaders
+function acquireToken(callback) {
+    function adalcb(error, token) {
+        if (!error) {
+            callback(token);
+        } else {
+            throw new Error(error)
         }
-    );
-    if (tokenResponse.data.error) {
-        throw new Error(tokenResponse.data.error_description || "Could not obtain token");
     }
 
-    // get a jwks client to verify the response
-    var client = jwksClient({
-        jwksUri: IDDW_BASE_URL + '/jwks.json'
-    });
-
-    function getKey(header, callback) {
-        client.getSigningKey(header.kid, function(err, key) {
-            var signingKey = key.publicKey || key.rsaPublicKey;
-            callback(null, signingKey);
-        });
-    }
-
-    // verify and return the decoded result
-    return await new Promise((resolve, reject) => {
-        jwt.verify(tokenResponse.data.id_token, getKey, (err, decoded) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(decoded);
-            }
-        });
-    });
-}
-
-/**
- * Handle a redirect invocation of this hook
- * 
- * @param {*} session     session object
- * @param {*} callback    hook callback
- */
-function handleRedirect(session, callback) {
-    // this is not the callback from iddw, so initiate the authorization flow against them
-    callback(new RedirectRequestData(
-        ID_DATAWEB_BASE_URL + '/authorize' +
-        `?client_id=${ID_DATAWEB_CLIENT_ID}` +
-        '&scope=openid+country.US' +
-        '&response_type=code' +
-        `&redirect_uri=${STRV_URL}/provider/continue`,
-        session));
+    // get the token
+    adalContext.acquireTokenWithClientCredentials(DYNAMICS_RESOURCE, DYNAMICS_CLIENT_ID, DYNAMICS_CLIENT_SECRET, adalcb);
 }
 
 /** Allow registration
@@ -166,7 +91,7 @@ function handleRedirect(session, callback) {
 /** Deny registration
  *
  * @callback denyRequestCallback
- * @param {DenyRequest} error
+ * @param {ErrorDenyRequest} error
  */
 
 /** RegistrationData */
@@ -216,8 +141,8 @@ class AdditionalAuthenticator {
  * @param {Object} session
  */
 
-/** DenyRequest is a global object
+/** ErrorDenyRequest is a global object
  * @constructor
- * @param {string} error
  * @param {string} description
+ * @param {string} hint
  */
