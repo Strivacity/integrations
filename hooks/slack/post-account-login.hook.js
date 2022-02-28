@@ -37,7 +37,7 @@ const SLACK_CHANNEL = '#channel'
  */
 module.exports = async function({ application, oidc_context, customer, session }) {
     // get ip and reverse dns
-    const ip_address = customer.ip_address
+    let ip_address = customer.ip_address
     const domain = await reverse(ip_address)
     if (domain) {
         ip_address += (" (" + domain + ")")
