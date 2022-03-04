@@ -55,7 +55,7 @@ module.exports = async function({ application, oidc_context, customer, session, 
 
     // generate a request object
     const request = {
-        filterGroups: [{ filters: [{ propertyName: 'hs_object_id', operator: 'GTE', value: 1 }] }],
+        filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: customer.attributes.emails.primaryEmail }] }],
         sorts: [JSON.stringify({ propertyName: 'createdate', direction: 'DESCENDING' })],
         query,
         properties,
