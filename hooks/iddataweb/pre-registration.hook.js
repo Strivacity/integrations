@@ -53,7 +53,7 @@ const STRV_BASE_URL = "https://[domain].strivacity.com";
  */
 module.exports = async function({ application, oidc_context, customer, session, continue_context, continue_request_parameters }, callback, deny) {
     if (continue_context) {
-        await handleContinue(session, continue_context.code, callback, deny);
+        await handleContinue(customer, session, continue_context.code, callback, deny);
     } else {
         await handleRedirect(session, callback);
     }
@@ -62,12 +62,13 @@ module.exports = async function({ application, oidc_context, customer, session, 
 /**
  * Handle a continued invocation of this hook
  * 
+ * @param {*} customer    customer object
  * @param {*} session     session object
  * @param {*} code        OIDC authorization code
  * @param {*} callback    hook callback
  * @param {*} deny        deny callback
  */
-async function handleContinue(session, code, callback, deny) {
+async function handleContinue(customer, session, code, callback, deny) {
     // get the IDDW result
     let iddwResult;
     try {
@@ -149,11 +150,11 @@ async function getIDDWResult(code) {
 function handleRedirect(session, callback) {
     // this is not the callback from iddw, so initiate the authorization flow against them
     callback(new RedirectRequestData(
-        ID_DATAWEB_BASE_URL + '/authorize' +
-        `?client_id=${ID_DATAWEB_CLIENT_ID}` +
+        IDDW_BASE_URL + '/authorize' +
+        `?client_id=${IDDW_CLIENT_ID}` +
         '&scope=openid+country.US' +
         '&response_type=code' +
-        `&redirect_uri=${STRV_URL}/provider/continue`,
+        `&redirect_uri=${STRV_BASE_URL}/provider/continue`,
         session));
 }
 

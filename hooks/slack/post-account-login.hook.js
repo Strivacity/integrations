@@ -6,8 +6,8 @@
  * @module integrations/slack
  */
 
-slackr = require('node-slackr');
-dns = require('dns').promises
+const slackr = require('node-slackr');
+const dns = require('dns').promises
 
 const SLACK_WEBHOOK = 'https://[slack webhook]'
 const SLACK_CHANNEL = '#channel'
@@ -45,7 +45,7 @@ module.exports = async function({ application, oidc_context, customer, session }
 
     // set up slack notifier
     let hook = new slackr(SLACK_WEBHOOK);
-    messages = {
+    let messages = {
         text: "User completed login",
         channel: SLACK_CHANNEL,
         attachments: [{
