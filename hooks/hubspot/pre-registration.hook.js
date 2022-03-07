@@ -72,3 +72,68 @@ module.exports = async function({ application, oidc_context, customer, session, 
 
     callback(new RegistrationData(customer.attributes, [], session));
 };
+
+/** Allow registration
+ *
+ * @callback preRegistrationCallback
+ * @param {RegistrationData|RedirectRequest|ShowErrorMessage} token
+ */
+
+/** Deny registration
+ *
+ * @callback denyRequestCallback
+ * @param {DenyRequest} error
+ */
+
+/** RegistrationData */
+class RegistrationData {
+    attributes = {}
+    additionalAuthenticators = []
+    session = {}
+
+    /**
+     * @constructor
+     * @param {Object} attributes
+     * @param {AdditionalAuthenticator[]} additionalAuthenticators
+     * @param {Object} session
+     */
+    constructor(attributes, additionalAuthenticators, session) {
+        this.attributes = attributes;
+        this.additionalAuthenticators = additionalAuthenticators;
+        this.session = session;
+    }
+}
+
+/** AdditionalAuthenticator */
+class AdditionalAuthenticator {
+    type = null;
+    target = null;
+
+    /**
+     * @constructor
+     * @param {"email"|"phone"} type
+     * @param {string} target
+     */
+    constructor(type, target) {
+        this.type = type;
+        this.target = target;
+    }
+}
+
+/** RedirectRequest is a global object
+ * @constructor
+ * @param {string} redirect_url
+ * @param {Object} session
+ */
+
+/** ShowErrorMessage is a global object
+ * @constructor
+ * @param {string} error_message
+ * @param {Object} session
+ */
+
+/** DenyRequest is a global object
+ * @constructor
+ * @param {string} error
+ * @param {string} description
+ */
