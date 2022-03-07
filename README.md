@@ -1,1 +1,1 @@
-# Strivacity Integrations [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/Strivacity/integrations/build)](https://github.com/Strivacity/integrations/actions/workflows/main.yml)
+# Strivacity Integrations [![build](https://github.com/Strivacity/integrations/actions/workflows/main.yml/badge.svg)](https://github.com/Strivacity/integrations/actions/workflows/main.yml)
