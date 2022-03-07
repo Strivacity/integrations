@@ -15,5 +15,8 @@
     "bugs": {
         "url": "https://github.com/Strivacity/integrations/issues"
     },
-    "homepage": "https://github.com/Strivacity/integrations#readme"
+    "homepage": "https://github.com/Strivacity/integrations#readme",
+    "devDependencies": {
+        "eslint": "^8.10.0"
+    }
 }
