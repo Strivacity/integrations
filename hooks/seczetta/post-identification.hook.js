@@ -147,7 +147,7 @@ module.exports = async function({ application, oidc_context, customer, authentic
     const overallScore = riskScoreObj.overall_score;
 
     // allowableRisk isn't used at the moment - it could be used to require MFA if they are above a certain threshold
-    const allowableRisk = parseInt(config.SECZETTA_ALLOWABLE_RISK, 10);
+    // const allowableRisk = parseInt(config.SECZETTA_ALLOWABLE_RISK, 10);
 
     // if risk score is above the maximum risk score, fail authN
     const maximumRisk = parseInt(config.SECZETTA_MAXIMUM_ALLOWED_RISK, 10);
