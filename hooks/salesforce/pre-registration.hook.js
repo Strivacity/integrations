@@ -61,7 +61,7 @@ module.exports = async function({ application, oidc_context, customer, session, 
     // login to SFDC
     const token = await conn.authenticate({ username: SFDC_USER, password: SFDC_PASSWORD })
     if (!token) {
-        deny(new ErrorDenyRequest("Failed to authenticate to salesforce.", ""));
+        deny(new DenyRequest("Failed to authenticate to salesforce.", ""));
         return
     }
 

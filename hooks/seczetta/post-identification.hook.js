@@ -60,9 +60,33 @@ module.exports = async function({ application, oidc_context, customer, authentic
     // ensure we have proper configuration
     if (!config.SECZETTA_API_KEY || !config.SECZETTA_BASE_URL || !config.SECZETTA_ATTRIBUTE_ID || !config.SECZETTA_PROFILE_TYPE_ID || !config.SECZETTA_ALLOWABLE_RISK || !config.SECZETTA_MAXIMUM_ALLOWED_RISK) {
         console.log("missing required configuration, skipping");
-        deny(new ErrorDenyRequest("missing required configuration, skipping", ""));
+        deny(new DenyRequest("missing required configuration, skipping", ""));
         return
     }
+
+    let uid = customer.info.userName
+    let attributeId = config.SECZETTA_ATTRIBUTE_ID;
+    let profileTypeId = config.SECZETTA_PROFILE_TYPE_ID;
+    const profileRequestUrl = new URL('/api/advanced_search/run', config.SECZETTA_BASE_URL);
+
+    let advancedSearchBody = {
+        advanced_search: {
+            label: "All Contractors",
+            condition_rules_attributes: [{
+                    "type": "ProfileTypeRule",
+                    "comparison_operator": "==",
+                    "value": profileTypeId
+                },
+                {
+                    "type": "ProfileAttributeRule",
+                    "condition_object_id": attributeId,
+                    "object_type": "NeAttribute",
+                    "comparison_operator": "==",
+                    "value": uid
+                }
+            ]
+        }
+    };
 
     // we want to check if a profile exists 
     let profileResponse
@@ -82,7 +106,7 @@ module.exports = async function({ application, oidc_context, customer, authentic
                 callback(new AllowAuthentication(session));
                 return
             }
-            deny(new ErrorDenyRequest("failed to retrieve profile", ""));
+            deny(new DenyRequest("failed to retrieve profile", ""));
             return
         }
     } catch (profileError) {
@@ -91,11 +115,12 @@ module.exports = async function({ application, oidc_context, customer, authentic
             callback(new AllowAuthentication(session));
             return
         }
-        deny(new ErrorDenyRequest("error retrieving profile, failing", ""));
+        deny(new DenyRequest("error retrieving profile, failing", ""));
         return
     }
 
     // now we can check the risk score
+    let riskScoreResponse
     let objectId = profileResponse.data.profiles[0].id;
     const riskScoreRequestUrl = new URL('/api/risk_scores?object_id=' + objectId, config.SECZETTA_BASE_URL);
     try {
@@ -113,7 +138,7 @@ module.exports = async function({ application, oidc_context, customer, authentic
             callback(new AllowAuthentication(session));
             return
         }
-        deny(new ErrorDenyRequest("error retrieving risk score, failing", ""));
+        deny(new DenyRequest("error retrieving risk score, failing", ""));
         return
     }
 
