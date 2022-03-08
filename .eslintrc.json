@@ -10,5 +10,10 @@
     },
     "rules": {
         "no-unused-vars": "warn"
+    },
+    "globals": {
+        "DenyRequest": "readonly",
+        "RedirectRequest": "readonly",
+        "ShowErrorMessage": "readonly"
     }
 }

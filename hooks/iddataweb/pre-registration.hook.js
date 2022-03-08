@@ -79,7 +79,7 @@ async function handleContinue(customer, session, code, callback, deny) {
     }
 
     if (!iddwResult || iddwResult.policyDecision !== 'approve') {
-        deny(new ErrorDenyRequest("Failed validation", ""));
+        deny(new DenyRequest("Failed validation", ""));
         return;
     }
 
@@ -149,7 +149,7 @@ async function getIDDWResult(code) {
  */
 function handleRedirect(session, callback) {
     // this is not the callback from iddw, so initiate the authorization flow against them
-    callback(new RedirectRequestData(
+    callback(new RedirectRequest(
         IDDW_BASE_URL + '/authorize' +
         `?client_id=${IDDW_CLIENT_ID}` +
         '&scope=openid+country.US' +
