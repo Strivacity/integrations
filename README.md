@@ -38,4 +38,4 @@ Integrations live in the hooks folder.
 
 ## License
 
-This project is licensed under the MIT license. See the [LICENSE](https://github.com/Strivacity/sdk-js/blob/master/LICENSE) file for more info.
+This project is licensed under the MIT license. See the [LICENSE](https://github.com/Strivacity/integrations/blob/master/LICENSE) file for more info.
